@@ -7,7 +7,6 @@ int main()
 	Stack stk = {};
 	StackConstructor (&stk, 2);
 	StackLog (&stk);
-	//system ("(echo Log Done) & pause");
 
 	StackPush (&stk, 1) ass(stk);
 	StackPush (&stk, 2) ass(stk);

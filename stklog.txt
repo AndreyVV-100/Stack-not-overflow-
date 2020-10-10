@@ -1,0 +1,64 @@
+
+Wed Oct  7 00:21:13 2020
+Stack [STK_GOOD] : Nice!
+size = 0
+capacity = 2
+min_capacity = 2
+buffer:
+[0] = -nan(ind)
+[1] = -nan(ind)
+
+
+Wed Oct  7 00:21:13 2020
+Stack [STK_GOOD] : Nice!
+size = 3
+capacity = 4
+min_capacity = 2
+buffer:
+[0] = 1.000000
+[1] = 2.000000
+[2] = 3.000000
+[3] = -nan(ind)
+
+
+Wed Oct  7 00:21:13 2020
+Stack [BAD_SIZE_ZERO] : StackPop was called when size was zero.
+size = 0
+capacity = 2
+min_capacity = 2
+buffer:
+[0] = -nan(ind)
+[1] = -nan(ind)
+
+
+Sat Oct 10 14:05:50 2020
+Stack [STK_GOOD] : Nice!
+size = 0
+capacity = 2
+min_capacity = 2
+buffer:
+[0] = -nan(ind)
+[1] = -nan(ind)
+
+
+Sat Oct 10 14:05:50 2020
+Stack [STK_GOOD] : Nice!
+size = 3
+capacity = 4
+min_capacity = 2
+buffer:
+[0] = 1.000000
+[1] = 2.000000
+[2] = 3.000000
+[3] = -nan(ind)
+
+
+Sat Oct 10 14:05:50 2020
+Stack [BAD_SIZE_ZERO] : StackPop was called when size was zero.
+size = 0
+capacity = 2
+min_capacity = 2
+buffer:
+[0] = -nan(ind)
+[1] = -nan(ind)
+

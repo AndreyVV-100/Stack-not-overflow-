@@ -32,11 +32,11 @@ void StackDestructor (Stack* stk)
 	return;
 }
 
-void StackPush(Stack* stk, stk_type elem)
+void StackPush (Stack* stk, stk_type elem)
 {
 	ASSERT_OK_B
 
-		if (stk->size == stk->capacity) StackResizeUp(stk);
+	if (stk->size == stk->capacity) StackResizeUp (stk);
 	*(stk->buffer + (stk->size)++) = elem;
 
 	ASSERT_OK_E
@@ -44,27 +44,27 @@ void StackPush(Stack* stk, stk_type elem)
 	return;
 }
 
-stk_type StackPop(Stack* stk)
+stk_type StackPop (Stack* stk)
 {
 	ASSERT_OK_B
 	
 	if (stk->size == 0)
 	{
 		stk->status_error = BAD_SIZE_ZERO;
-		StackLog(stk);
+		StackLog (stk);
 	}
 	else
 	{
 		if (stk->capacity > stk->min_capacity &&
 			stk->capacity >= STK_RESIZE * STK_RESIZE * stk->size)
-			StackResizeDown(stk);
+			StackResizeDown (stk);
 
 	stk_type poped = stk->buffer[--(stk->size)];
 	*(stk->buffer + stk->size) = STK_POISON;
 
 	if (StackError (stk)) StackLog (stk);
 	return poped;
-	}}
+	GG
 }
 
 void StackResizeUp (Stack* stk)
@@ -89,31 +89,30 @@ void StackResizeDown (Stack* stk)
 	if (stk->capacity >= STK_RESIZE * stk->size && 
 		stk->capacity >= STK_RESIZE * stk->min_capacity)
 			stk->buffer = (stk_type*) realloc (stk->buffer, 
-				sizeof (stk_type) * (stk->capacity) / STK_RESIZE);
+		    		                           sizeof (stk_type) * (stk->capacity) / STK_RESIZE);
 
 	stk->capacity /= STK_RESIZE;
 
 	ASSERT_OK_E
 }
 
-int StackError(Stack* stk)
+int StackError (Stack* stk)
 {
-	if (!stk) return STK_NULL;
-	else if (stk->buffer == ERR_FREE)
-	{
-		stk->status_error = STK_DEL;
-		return STK_DEL;
-	}
-	else if (!stk->buffer)
-	{
-		stk->status_error = BUF_NULL;
-		return BUF_NULL;
-	}
-	else if (stk->size > stk->capacity)
+	if (!stk)
+		return STK_NULL;
+	
+	if (stk->buffer == ERR_FREE)
+		return stk->status_error = STK_DEL;
+	
+	if (!stk->buffer)
+		return stk->status_error = BUF_NULL;
+	
+	if (stk->size > stk->capacity)
 	{
 		stk->status_error = BAD_SIZE_CAP;
 		return BAD_SIZE_CAP;
 	}
+
 	else if (stk->capacity < stk->min_capacity)
 	{
 		stk->status_error = BAD_CAP;
@@ -123,9 +122,8 @@ int StackError(Stack* stk)
 	return 0;
 }
 
-void StackLog(Stack* stk)
+void StackLog (Stack* stk)
 {
-	//system ("dir & pause");
 	FILE* file = fopen ("stklog.txt", "a");
 
 	struct tm* mytime = nullptr;
@@ -138,10 +136,11 @@ void StackLog(Stack* stk)
 	{
 		fprintf (file, "Stack [STK_NULL] : The address of stack is null.\n\n");
 		
-		fclose(file);
+		fclose (file);
 		
 		return;
 	}
+
 	switch (stk->status_error)
 	{
 		case STK_GOOD:
@@ -157,7 +156,7 @@ void StackLog(Stack* stk)
 			fprintf (file, "Stack [BAD_SIZE_CAP] : The size of stack is more then capacity.\n");
 			break;
 		case BAD_SIZE_ZERO:
-			fprintf(file,  "Stack [BAD_SIZE_ZERO] : StackPop was called when size was zero.\n");
+			fprintf (file,  "Stack [BAD_SIZE_ZERO] : StackPop was called when size was zero.\n");
 			break;
 		case BAD_CAP:
 			fprintf (file, "Stack [BAD_CAP] : The capacity of stack is less then minimal capacity.\n");
@@ -166,8 +165,10 @@ void StackLog(Stack* stk)
 			fprintf (file, "Stack [UNK] : Unknown error.\n");
 			break;
 	};
-	fprintf(file, "size = %d\n" "capacity = %d\n" "min_capacity = %d\n" "buffer:\n", 
-			  stk->size,	stk->capacity,	  stk->min_capacity);
+
+	fprintf (file, "size = %d\n" "capacity = %d\n" "min_capacity = %d\n" "buffer:\n", 
+			   stk->size, 	 stk->capacity,	   stk->min_capacity);
+
 	for (int element = 0; element < stk->capacity; element++)
 		fprintf (file, "[%d] = %lf\n", element, stk->buffer[element]);
 

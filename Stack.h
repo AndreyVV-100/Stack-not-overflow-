@@ -12,8 +12,17 @@
 #define ERR_FREE (stk_type*) 228
 #define ASSERT_OK_B if (StackError (stk)) StackLog (stk); else {
 #define ASSERT_OK_E }if (StackError (stk)) StackLog (stk);
+#define GG }}
 
-enum stack_errors { STK_GOOD, STK_NULL, STK_DEL, BUF_NULL, BAD_SIZE_CAP, BAD_SIZE_ZERO, BAD_CAP};
+enum stack_errors { 
+	STK_GOOD	  = 0, 
+	STK_NULL	  = 1, 
+	STK_DEL		  = 2, 
+	BUF_NULL	  = 3, 
+	BAD_SIZE_CAP  = 4, 
+	BAD_SIZE_ZERO = 5, 
+	BAD_CAP		  = 6
+};
 
 typedef double stk_type;
 
