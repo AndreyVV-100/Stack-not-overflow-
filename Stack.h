@@ -29,8 +29,8 @@ enum stack_errors {
 	DO_MEM_ERR	  = 11,
 	NOT_CREATED   = 12,
 	BAD_CREATE	  = 13,
-	HASH_STK	  = 14,
-	HASH_BUF	  = 15
+	ERR_HASH_STK  = 14,
+	ERR_HASH_BUF  = 15
 };
 
 typedef double stk_type;

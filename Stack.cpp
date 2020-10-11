@@ -212,10 +212,10 @@ int StackError (Stack* stk)
 	RecountHash (stk);
 
 	if (stk->stk_hash != hash1)
-		return stk->status_error = HASH_STK;
+		return stk->status_error = ERR_HASH_STK;
 
 	if (stk->buf_hash != hash2)
-		return stk->status_error = HASH_BUF;
+		return stk->status_error = ERR_HASH_BUF;
 	
 	return 0;
 }
@@ -321,6 +321,14 @@ void StackLog(Stack* stk)
 
 		case BAD_CREATE:
 			fprintf (file, "Stack [BAD_CREATE] : Trying to construct stack which already not empty.\n");
+			break;
+
+		case ERR_HASH_STK:
+			fprintf (file, "Stack [ERR_HASH_STK] : Data in stack was changed illegally.");
+			break;
+
+		case ERR_HASH_BUF:
+			fprintf (file, "Stack [ERR_HASH_BUF] : Data in buffer was changed illegally.");
 			break;
 
 		default:
