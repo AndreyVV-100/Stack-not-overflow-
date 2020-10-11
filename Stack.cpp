@@ -4,30 +4,64 @@ void StackConstructor (Stack* stk, size_t max_size)
 {
 	assert (stk);
 
-	stk->buffer = (stk_type*) calloc (max_size, sizeof (stk_type));
-	assert (stk->buffer);
+	if (!(stk->buffer == ERR_FREE && stk->status_error == STK_DEL ||
+		  stk->buffer == nullptr  && stk->status_error == NOT_CREATED))
+	{
+		stk->status_error = BAD_CREATE;
+		StackLog (stk);
+		return;
+	}
 
-	for (size_t i = 0; i < max_size; i++) *(stk->buffer + i) = STK_POISON;
+	stk_type* buf = (stk_type*) malloc ((max_size + 2) * sizeof (stk_type));
+	
+	if (!buf)
+	{
+		stk->status_error = DO_MEM_ERR;
+		StackLog (stk);
+		return;
+	}
+	
+	*((storm*)  buf)				 = STORMY_PETREL;
+	*((storm*) (buf + max_size + 1)) = STORMY_PETREL;
 
+	StackPoison (buf + 1, max_size);
+
+	stk->buffer		  = buf + 1;
+	stk->status_error = STK_GOOD;
 	stk->capacity     = max_size;
 	stk->min_capacity = max_size;
+
+	RecountHash (stk);
 
 	return;
 }
 
 void StackDestructor (Stack* stk)
 {
-	assert (stk);
-	assert (stk->buffer);
-	assert (stk->buffer != ERR_FREE);
+	ASSERT_OK_B{
 	
-	for (size_t i = 0; i < stk->capacity; i++) *(stk->buffer + i) = STK_POISON;
+	stk->buffer -= 1;
+
+	StackPoison (stk->buffer, stk->capacity + 2);
 
 	free (stk->buffer);
 
 	stk->buffer = ERR_FREE;
 	stk->size = 0;
 	stk->capacity = 0;
+	stk->status_error = NOT_CREATED;
+	stk->buf_hash = 0;
+	stk->stk_hash = 0;
+	GG
+	return;
+}
+
+void StackPoison (stk_type* buffer, size_t num)
+{
+	assert (buffer);
+	
+	for (size_t element = 0; element < num; element++)
+		buffer[element] = STK_POISON;
 
 	return;
 }
@@ -37,7 +71,12 @@ void StackPush (Stack* stk, stk_type elem)
 	ASSERT_OK_B
 
 	if (stk->size == stk->capacity) StackResizeUp (stk);
+
+	if (stk->status_error == DO_MEM_ERR) return;
+
 	*(stk->buffer + (stk->size)++) = elem;
+
+	RecountHash (stk);
 
 	ASSERT_OK_E
 
@@ -52,6 +91,7 @@ stk_type StackPop (Stack* stk)
 	{
 		stk->status_error = BAD_SIZE_ZERO;
 		StackLog (stk);
+		return STK_POISON;
 	}
 	else
 	{
@@ -59,47 +99,92 @@ stk_type StackPop (Stack* stk)
 			stk->capacity >= STK_RESIZE * STK_RESIZE * stk->size)
 			StackResizeDown (stk);
 
-	stk_type poped = stk->buffer[--(stk->size)];
-	*(stk->buffer + stk->size) = STK_POISON;
+		if (stk->status_error == DO_MEM_ERR) return STK_POISON;
 
-	if (StackError (stk)) StackLog (stk);
-	return poped;
+		stk_type popped = stk->buffer[--(stk->size)];
+		*(stk->buffer + stk->size) = STK_POISON;
+		
+		RecountHash (stk);
+
+		if (StackError (stk)) StackLog (stk);
+		return popped;
 	GG
+
+	return STK_POISON;
 }
 
 void StackResizeUp (Stack* stk)
 {
 	ASSERT_OK_B
 
-	stk->buffer = (stk_type*) realloc (stk->buffer, 
-		sizeof (stk_type) * (stk->capacity) * STK_RESIZE);
+	stk_type* buf = stk->buffer - 1;
+
+	buf = (stk_type*) realloc (buf, sizeof (stk_type) * (stk->capacity * STK_RESIZE + 2));
+
+	if (!buf)
+	{
+		stk->status_error = DO_MEM_ERR;
+		StackLog (stk);
+		return;
+	}
 
 	(stk->capacity) *= STK_RESIZE;
 
-	for (int i_buf = stk->size + 1; i_buf < stk->capacity; i_buf++)
-		*(stk->buffer + i_buf) = STK_POISON;
+	*((storm*)  buf)					  = STORMY_PETREL;
+	*((storm*) (buf + stk->capacity + 1)) = STORMY_PETREL;
+
+	StackPoison (buf + stk->size + 1, stk->capacity - stk->size);
+
+	stk->buffer = buf + 1;
+
+	RecountHash (stk);
 
 	ASSERT_OK_E
+
+	return;
 }
 
 void StackResizeDown (Stack* stk)
 {
 	ASSERT_OK_B
 
+	stk_type* buf = stk->buffer - 1;
+
+	if (!buf)
+	{
+		stk->status_error = DO_MEM_ERR;
+		StackLog (stk);
+		return;
+	}
+
+	*(buf + stk->capacity + 1) = STK_POISON;
+
 	if (stk->capacity >= STK_RESIZE * stk->size && 
 		stk->capacity >= STK_RESIZE * stk->min_capacity)
-			stk->buffer = (stk_type*) realloc (stk->buffer, 
-		    		                           sizeof (stk_type) * (stk->capacity) / STK_RESIZE);
+			buf = (stk_type*) realloc (buf, 
+									  sizeof (stk_type) * (stk->capacity / STK_RESIZE + 2));
 
 	stk->capacity /= STK_RESIZE;
+	*((storm*) (buf + stk->capacity + 1)) = STORMY_PETREL;
+	stk->buffer = buf + 1;
+
+	RecountHash (stk);
 
 	ASSERT_OK_E
+
+	return;
 }
 
 int StackError (Stack* stk)
 {
 	if (!stk)
 		return STK_NULL;
+
+	if (stk->stormy_petrel_begin != STORMY_PETREL)
+		return stk->status_error = STK_PETREL_B;
+
+	if (stk->stormy_petrel_end != STORMY_PETREL)
+		return stk->status_error = STK_PETREL_E;
 	
 	if (stk->buffer == ERR_FREE)
 		return stk->status_error = STK_DEL;
@@ -108,21 +193,34 @@ int StackError (Stack* stk)
 		return stk->status_error = BUF_NULL;
 	
 	if (stk->size > stk->capacity)
-	{
-		stk->status_error = BAD_SIZE_CAP;
-		return BAD_SIZE_CAP;
-	}
+		return stk->status_error = BAD_SIZE_CAP;
 
-	else if (stk->capacity < stk->min_capacity)
-	{
-		stk->status_error = BAD_CAP;
-		return BAD_CAP;
-	}
+	if (stk->capacity < stk->min_capacity)
+		return stk->status_error = BAD_CAP;
+	
+	if (*((storm*) (stk->buffer - 1)) != STORMY_PETREL)
+		return stk->status_error = BUF_PETREL_B;
 
+	if (*((storm*) (stk->buffer + stk->capacity)) != STORMY_PETREL)
+		return stk->status_error = BUF_PETREL_E;
+
+	if (stk->status_error != 0)
+		return stk->status_error;
+
+	unsigned long long hash1 = stk->stk_hash;
+	unsigned long long hash2 = stk->buf_hash;
+	RecountHash (stk);
+
+	if (stk->stk_hash != hash1)
+		return stk->status_error = HASH_STK;
+
+	if (stk->buf_hash != hash2)
+		return stk->status_error = HASH_BUF;
+	
 	return 0;
 }
 
-void StackLog (Stack* stk)
+void StackLog(Stack* stk)
 {
 	FILE* file = fopen ("stklog.txt", "a");
 
@@ -135,9 +233,63 @@ void StackLog (Stack* stk)
 	if (!stk)
 	{
 		fprintf (file, "Stack [STK_NULL] : The address of stack is null.\n\n");
-		
+
 		fclose (file);
-		
+
+		return;
+	}
+
+	if (stk->status_error == BUF_NULL)
+	{
+		fprintf (file, "Stack [BUF_NULL] : The address of buffer is nullptr.\n");
+
+		fclose (file);
+
+		return;
+	}
+
+	if (stk->status_error == STK_PETREL_B)
+	{
+		fprintf (file, "Stack [STK_PETREL_B] : The begin stormy petrel in stack was damaged.\n");
+
+		fclose (file);
+
+		return;
+	}
+
+	if (stk->status_error == STK_PETREL_E)
+	{ 
+		fprintf (file, "Stack [STK_PETREL_E] : The end stormy petrel in stack was damaged.\n");
+
+		fclose (file);
+
+		return;
+	}
+
+	if (stk->status_error == STK_DEL)
+	{
+		fprintf (file, "Stack [STK_DEL] : Stack was deleted.\n");
+
+		fclose (file);
+
+		return;
+	}
+
+	if (stk->status_error == DO_MEM_ERR)
+	{
+		fprintf (file, "Stack [DO_MEM_ERR] : The program can`t pick out new memory.\n");
+
+		fclose (file);
+
+		return;
+	}
+
+	if (stk->status_error == NOT_CREATED)
+	{
+		fprintf (file, "Stack [NOT_CREATED] : Attempt to manipulation with stack which wasn`t constructed.\n");
+
+		fclose (file);
+
 		return;
 	}
 
@@ -146,21 +298,31 @@ void StackLog (Stack* stk)
 		case STK_GOOD:
 			fprintf (file, "Stack [STK_GOOD] : Nice!\n");
 			break;
-		case STK_DEL:
-			fprintf (file, "Stack [STK_DEL] : Stack was deleted.\n");
-			break;
-		case BUF_NULL:
-			fprintf (file, "Stack [BUF_NULL] : The address of buffer is nullptr.\n");
-			break;
+
 		case BAD_SIZE_CAP:
 			fprintf (file, "Stack [BAD_SIZE_CAP] : The size of stack is more then capacity.\n");
 			break;
+
 		case BAD_SIZE_ZERO:
 			fprintf (file,  "Stack [BAD_SIZE_ZERO] : StackPop was called when size was zero.\n");
 			break;
+
 		case BAD_CAP:
 			fprintf (file, "Stack [BAD_CAP] : The capacity of stack is less then minimal capacity.\n");
 			break;
+
+		case BUF_PETREL_B:
+			fprintf (file, "Stack [BUF_PETREL_B] : The begin stormy petrel in buffer was damaged.\n");
+			break;
+
+		case BUF_PETREL_E:
+			fprintf (file, "Stack [BUF_PETREL_E] : The end stormy petrel in buffer was damaged.");
+			break;
+
+		case BAD_CREATE:
+			fprintf (file, "Stack [BAD_CREATE] : Trying to construct stack which already not empty.\n");
+			break;
+
 		default:
 			fprintf (file, "Stack [UNK] : Unknown error.\n");
 			break;
@@ -169,11 +331,46 @@ void StackLog (Stack* stk)
 	fprintf (file, "size = %d\n" "capacity = %d\n" "min_capacity = %d\n" "buffer:\n", 
 			   stk->size, 	 stk->capacity,	   stk->min_capacity);
 
+	/*
+	fprintf (file, "begin buffer petrel = %llX\n" "end buffer petrel   = %llX\n",
+		*((storm*) (stk->buffer - 1)),
+		*((storm*) (stk->buffer + stk->capacity)));
+	*/
+
 	for (int element = 0; element < stk->capacity; element++)
 		fprintf (file, "[%d] = %lf\n", element, stk->buffer[element]);
 
 	fprintf (file, "\n");
-	fclose (file);
+	fclose  (file);
+
+	return;
+}
+
+unsigned long long CountHash (char* buffer, size_t num)
+{
+	const int shift = 5;
+	unsigned long long ans = 0;
+	char buf = 0;
+
+	for (size_t count = 0; count < num; count++)
+	{
+		ans += buffer[count];
+		buf = ans >> (sizeof (unsigned long long) - shift);
+		ans = (ans << shift) + buf;
+	}
+
+	return ans;
+}
+
+void RecountHash (Stack* stk)
+{
+	assert (stk);
+	
+	stk->stk_hash = 0;
+	stk->buf_hash = 0;
+	
+	stk->stk_hash = CountHash ((char*) stk,			STK_HASH);
+	stk->buf_hash = CountHash ((char*) stk->buffer, stk->capacity * sizeof (stk_type));
 
 	return;
 }
